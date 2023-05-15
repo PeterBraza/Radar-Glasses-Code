@@ -1,43 +1,10 @@
-/*#include <SoftwareSerial.h>
-#include "TFMini.h"
-// Setup software serial port 
-SoftwareSerial mySerial(3, 2);      // Uno RX (TFMINI TX), Uno TX (TFMINI RX)
-TFMini Tfmini;
-
-void setup () {
-  // Step 1: Initialize hardware serial port (serial debug port)
-  Serial.begin(115200);
-  // wait for serial port to connect. Needed for native USB port only
-  while(!Serial);
-     
-  Serial.println("Initializing...");
-
-  // Step 2: Initialize the data rate for the Software Serial port
-  mySerial.begin(TFMINI_BAUDRATE);
-
-  // Step 3: Initialize the TF Mini sensor
-  Tfmini.begin(&mySerial);    
-}
-
-void loop () {
-  // Take one TF Mini distance measurement
-  int dist = Tfmini.getDistance();
-  int strength = Tfmini.getRecentSignalStrength();
-
-  // Display the measurement
-  Serial.print(dist);
-  Serial.print(" cm      sigstr : ");
-  Serial.println(strength);
-
-  // Wait some short time before taking the next measurement
-  delay(250);  
-}*/
 #include <SoftwareSerial.h>
 #include "TFMini.h"
+
+int motorPin = 5; //motor transistor is connected to pin 5
 TFMini tfmini;
- 
-SoftwareSerial SerialTFMini(2, 3);          //The only value that matters here is the first one, 2, Rx
- 
+SoftwareSerial SerialTFMini(10, 11); //green goes to 10, white goes to 11 (for wiring).
+
 void getTFminiData(int* distance, int* strength)
 {
   static char i = 0;
@@ -74,33 +41,53 @@ void getTFminiData(int* distance, int* strength)
     }
   }
 }
- 
- 
 void setup()
 {
-  Serial.begin(115200);       //Initialize hardware serial port (serial debug port)
-  while (!Serial);            // wait for serial port to connect. Needed for native USB port only
-  Serial.println ("Initializing...");
-  SerialTFMini.begin(TFMINI_BAUDRATE);    //Initialize the data rate for the SoftwareSerial port
-  tfmini.begin(&SerialTFMini);            //Initialize the TF Mini sensor
+  Serial.begin(115200);
+  pinMode(motorPin, OUTPUT);
+  while(!Serial);
+  SerialTFMini.begin(TFMINI_BAUDRATE);
+  tfmini.begin(&SerialTFMini);  
+  //pinMode(AO, INPUT);
 }
- 
+//
+
+//max input frequency is 10
+//input is hertz (1/seconds)
+unsigned long long int i = 1;
 void loop()
 {
+  //gets the value of the "dial" or potentiometer for sensitivity
+  //Serial.println(cast);
+  //Serial.println(c);
+  //delay(1000);
+ /* digitalWrite(5, HIGH); //vibrate
+  delay(1000);  // delay one second
+  digitalWrite(5, LOW);  //stop vibrating
+  delay(1000); //wait 50 seconds.*/
+  //vibrate(100);
   int distance = 0;
   int strength = 0;
- 
+
   getTFminiData(&distance, &strength);
   while (!distance)
   {
     getTFminiData(&distance, &strength);
-    if (distance)
+    if (distance && distance>-1)
     {
+      int potVal = analogRead(A0);
+      Serial.print(" ");
       Serial.print(distance);
-      Serial.print("cm\t");
-      Serial.print("strength: ");
-      Serial.println(strength);
+      Serial.print(" ");
+      Serial.println(potVal);
+      
+      int operand = ((distance)/(potVal*20)) + 1;
+
+      (i%operand == 0 && potVal>100 && distance < 600) ? digitalWrite(motorPin, HIGH),  delay(24), digitalWrite(motorPin, LOW), i++: i++;
+      delay(24);
+      (i == 4294967294) ? i = 1: i;
+      //double v = 0;
     }
   }
-  delay(100);
+ // delay(200);
 }
